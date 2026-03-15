@@ -307,9 +307,30 @@ input[type=range]::-moz-range-thumb{
   font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;
   letter-spacing:0.06em;text-transform:uppercase;color:#000;transition:opacity 0.15s;
 }
+.add-ex-submit{
+  flex:2;padding:9px;background:var(--accent);border:none;border-radius:8px;
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;
+  letter-spacing:0.06em;text-transform:uppercase;color:#000;transition:opacity 0.15s;
+}
 .add-ex-submit:hover{opacity:0.85}
+.add-ex-diff-row{
+  display:flex;align-items:center;gap:10px;margin-top:8px;
+  background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 12px;
+}
+.add-ex-diff-label{font-size:12px;color:#888;font-weight:500;flex-shrink:0}
+.add-ex-diff-controls{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.add-ex-diff-btn{
+  width:26px;height:26px;border-radius:50%;background:var(--card);
+  border:1px solid var(--border);color:var(--text);font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;line-height:1;
+}
+.add-ex-diff-btn:hover{border-color:var(--accent);color:var(--accent)}
+.add-ex-diff-val{
+  font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;
+  color:var(--accent);min-width:20px;text-align:center;
+}
+.add-ex-diff-note{font-size:10px;color:var(--muted);flex:1;text-align:right;line-height:1.3}
 
-/* Complete button */
 .complete-wrap{padding:20px 0 8px;text-align:center}
 .complete-btn{
   width:100%;padding:15px;border-radius:12px;border:2px solid var(--border);
@@ -543,6 +564,15 @@ input[type=range]::-moz-range-thumb{
             <option value="reps">Reps</option>
             <option value="hold">Hold</option>
           </select>
+          <div class="add-ex-diff-row">
+            <span class="add-ex-diff-label">Difficulty</span>
+            <div class="add-ex-diff-controls">
+              <button type="button" class="add-ex-diff-btn" onclick="changeNewExDiff(-1)">−</button>
+              <span class="add-ex-diff-val" id="new-ex-diff-val">5</span>
+              <button type="button" class="add-ex-diff-btn" onclick="changeNewExDiff(1)">+</button>
+            </div>
+            <span class="add-ex-diff-note" id="new-ex-diff-note">For your reference only</span>
+          </div>
           <div style="display:flex;gap:8px;margin-top:10px">
             <button class="add-ex-cancel" onclick="document.getElementById('add-ex-form').style.display='none'">Cancel</button>
             <button class="add-ex-submit" onclick="submitNewExercise()">Add Exercise</button>
@@ -826,16 +856,30 @@ function createProfile() {
 }
 
 function deleteProfile(id) {
-  if (Object.keys(profiles).length <= 1) { showToast("Can't delete last profile"); return; }
-  if (!confirm(`Delete profile "${profiles[id].name}"?`)) return;
+  if (!confirm(`Delete profile "${profiles[id].name}"? This cannot be undone.`)) return;
+  const wasActive = id === activeProfileId;
   delete profiles[id];
-  if (activeProfileId === id) {
-    activeProfileId = Object.keys(profiles)[0];
-    loadProfile(activeProfileId);
+
+  const remaining = Object.keys(profiles);
+  if (remaining.length === 0) {
+    // No profiles left — create a fresh default
+    const newId = "profile_default_" + Date.now();
+    const freshCfg = { days:["Mon","Wed","Fri"], weeks:4, mins:10, diff:5, prog:8, exIds:EXERCISES.map(e=>e.id) };
+    profiles[newId] = { name:"Default", seed: generateNewSeed(), cfg: freshCfg, plan:[], currentDayIdx:0, currentView:"day", completedDays:{}, customExercises:[], deletedExIds:[], savedAt:Date.now() };
+    activeProfileId = newId;
+  } else if (wasActive) {
+    activeProfileId = remaining[0];
   }
+
+  loadProfile(activeProfileId);
   saveAll();
   renderProfileList();
   updateChip();
+  syncSetupUI();
+  if (wasActive) {
+    showScreen("setup");
+    closeSettings();
+  }
   showToast("Profile deleted");
 }
 
@@ -983,7 +1027,7 @@ function renderExerciseGrid() {
       <div class="ex-check" onclick="toggleExercise('${ex.id}', this)"><span class="ex-check-mark">✓</span></div>
       <div style="flex:1;min-width:0">
         <div class="ex-name">${ex.name}</div>
-        <div class="ex-tag">${ex.type === "hold" ? "Hold" : "Reps"}</div>
+        <div class="ex-tag">${ex.type === "hold" ? "Hold" : "Reps"}${isCustom && ex.difficulty ? ` · Difficulty ${ex.difficulty}` : ''}</div>
       </div>
       <button class="ex-del-btn" onclick="deleteExercise('${ex.id}', ${isCustom})" title="Delete">✕</button>`;
     eg.appendChild(d);
@@ -1019,7 +1063,16 @@ function deleteExercise(id, isCustom) {
   renderExerciseGrid();
 }
 
+let newExDiff = 5;
+
+function changeNewExDiff(d) {
+  newExDiff = Math.max(1, Math.min(10, newExDiff + d));
+  document.getElementById("new-ex-diff-val").textContent = newExDiff;
+}
+
 function showAddExerciseForm() {
+  newExDiff = 5;
+  document.getElementById("new-ex-diff-val").textContent = 5;
   document.getElementById("add-ex-form").style.display = "block";
   document.getElementById("new-ex-name").focus();
 }
@@ -1032,8 +1085,8 @@ function submitNewExercise() {
 
   const id = "custom_" + Date.now();
   const ex = type === "hold"
-    ? { id, name, type:"hold", baseDur:10, rest:60, desc: desc || "Custom exercise" }
-    : { id, name, type:"reps", baseReps:5, rest:60, desc: desc || "Custom exercise" };
+    ? { id, name, type:"hold", baseDur:10, rest:60, desc: desc || "Custom exercise", difficulty: newExDiff }
+    : { id, name, type:"reps", baseReps:5, rest:60, desc: desc || "Custom exercise", difficulty: newExDiff };
 
   customExercises.push(ex);
   cfg.exIds.push(id);
@@ -1044,6 +1097,8 @@ function submitNewExercise() {
   document.getElementById("new-ex-name").value = "";
   document.getElementById("new-ex-desc").value = "";
   document.getElementById("new-ex-type").value = "reps";
+  newExDiff = 5;
+  document.getElementById("new-ex-diff-val").textContent = 5;
   document.getElementById("add-ex-form").style.display = "none";
 
   renderExerciseGrid();
