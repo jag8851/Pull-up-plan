@@ -773,15 +773,15 @@ function createProfile() {
   let seedInput = seedEl.value.trim().replace(/\s/g,'');
   let profileCfg = JSON.parse(JSON.stringify(cfg));
   let baseSeed = generateNewSeed();
+  let decoded = null;
 
   if (seedInput) {
-    const decoded = decodeSeed(seedInput);
+    decoded = decodeSeed(seedInput);
     if (decoded) {
       profileCfg = decoded.cfg;
       baseSeed = decoded.base;
-      showToast("Seed decoded — settings restored!");
     } else {
-      showToast("Couldn't decode seed — using current settings");
+      showToast("Couldn't read that seed — using current settings");
     }
   }
 
@@ -789,26 +789,40 @@ function createProfile() {
   profiles[id] = {
     name,
     seed: seedInput || encodeSeed(baseSeed, profileCfg),
-    cfg: profileCfg,
+    cfg: JSON.parse(JSON.stringify(profileCfg)),
     plan: [],
     currentDayIdx: 0,
     currentView: "day",
+    completedDays: {},
+    customExercises: [],
+    deletedExIds: [],
     savedAt: Date.now()
   };
 
+  // Switch into the new profile
   activeProfileId = id;
   cfg = JSON.parse(JSON.stringify(profileCfg));
   currentSeed = baseSeed;
   plan = [];
-  updateChip();
-  updateSeedDisplay();
-  syncSetupUI();
-  saveAll();
-  renderProfileList();
+  completedDays = {};
+  customExercises = [];
+  deletedExIds = [];
+
   nameEl.value = "";
   seedEl.value = "";
   closeSettings();
+  updateChip();
+  saveAll();
+
+  // Sync all UI to the restored config
+  syncSetupUI();
   showScreen("setup");
+
+  if (decoded) {
+    showToast("Seed loaded — settings restored!");
+  } else {
+    showToast("Profile created!");
+  }
 }
 
 function deleteProfile(id) {
