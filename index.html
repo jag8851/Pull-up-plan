@@ -260,6 +260,55 @@ input[type=range]::-moz-range-thumb{
 .sum-row.training:hover{border-color:var(--accent)}
 .sum-day{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;min-width:30px}
 .sum-exs{font-size:11px;color:var(--muted);flex:1;line-height:1.4}
+/* Exercise delete button */
+.ex-del-btn{
+  background:none;border:none;color:#3a3a3a;font-size:13px;
+  padding:4px 6px;border-radius:5px;transition:all 0.15s;flex-shrink:0;
+  align-self:center;
+}
+.ex-del-btn:hover{color:#ef4444;background:rgba(239,68,68,0.1)}
+
+/* Add exercise button */
+.ex-add-btn{
+  background:var(--card);border:2px dashed var(--border);border-radius:10px;
+  padding:12px 14px;cursor:pointer;transition:all 0.15s;
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:600;color:var(--muted);
+  grid-column:1/-1;
+}
+.ex-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Add exercise form */
+.add-ex-form{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-top:8px;
+}
+.add-ex-title{font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.add-ex-input{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:9px 12px;font-size:13px;color:var(--text);outline:none;
+  font-family:'Barlow',sans-serif;transition:border-color 0.15s;margin-bottom:8px;display:block;
+}
+.add-ex-input:focus{border-color:var(--accent)}
+.add-ex-select{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:9px 12px;font-size:13px;color:var(--text);outline:none;
+  font-family:'Barlow',sans-serif;transition:border-color 0.15s;appearance:none;cursor:pointer;
+}
+.add-ex-select:focus{border-color:var(--accent)}
+.add-ex-cancel{
+  flex:1;padding:9px;background:none;border:1px solid var(--border);border-radius:8px;
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;
+  letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);transition:all 0.15s;
+}
+.add-ex-cancel:hover{border-color:#555;color:var(--text)}
+.add-ex-submit{
+  flex:2;padding:9px;background:var(--accent);border:none;border-radius:8px;
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;
+  letter-spacing:0.06em;text-transform:uppercase;color:#000;transition:opacity 0.15s;
+}
+.add-ex-submit:hover{opacity:0.85}
+
 /* Complete button */
 .complete-wrap{padding:20px 0 8px;text-align:center}
 .complete-btn{
@@ -484,8 +533,21 @@ input[type=range]::-moz-range-thumb{
 
       <div class="section">
         <div class="section-label">Exercises</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Select which to include. All use a bar or bodyweight.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Check to include. Tap ✕ to permanently remove. Add your own below.</div>
         <div class="ex-grid" id="ex-grid"></div>
+        <div class="add-ex-form" id="add-ex-form" style="display:none">
+          <div class="add-ex-title">New Exercise</div>
+          <input class="add-ex-input" id="new-ex-name" placeholder="Exercise name" maxlength="40">
+          <input class="add-ex-input" id="new-ex-desc" placeholder="Description (optional)" maxlength="100">
+          <select class="add-ex-select" id="new-ex-type">
+            <option value="reps">Reps</option>
+            <option value="hold">Hold</option>
+          </select>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="add-ex-cancel" onclick="document.getElementById('add-ex-form').style.display='none'">Cancel</button>
+            <button class="add-ex-submit" onclick="submitNewExercise()">Add Exercise</button>
+          </div>
+        </div>
       </div>
 
       <button class="generate-btn" onclick="generate()">Generate My Plan →</button>
@@ -578,6 +640,8 @@ let plan = [];
 let currentDayIdx = 0;
 let currentView = "day";
 let currentSeed = generateNewSeed();
+let customExercises = []; // [{id, name, type, desc, baseReps/baseDur, rest}]
+let deletedExIds = [];    // built-in exercise ids permanently removed
 
 // ══════════════════════════════════════════════════
 // SEED UTILS — seed encodes full config
@@ -662,6 +726,8 @@ function saveCurrentProfile() {
     currentDayIdx,
     currentView,
     completedDays,
+    customExercises,
+    deletedExIds,
     seed: currentSeed,
     savedAt: Date.now()
   };
@@ -692,6 +758,8 @@ function loadProfile(id) {
   currentView = p.currentView || "day";
   currentSeed = p.seed || generateNewSeed();
   completedDays = p.completedDays || {};
+  customExercises = p.customExercises || [];
+  deletedExIds = p.deletedExIds || [];
   updateChip();
   saveAll();
 }
@@ -819,12 +887,8 @@ function syncSetupUI() {
     b.classList.toggle("on", cfg.days.includes(b.textContent));
   });
 
-  // Sync exercise items
-  document.querySelectorAll(".ex-item").forEach(item => {
-    const id = item.dataset.exid;
-    const on = cfg.exIds.includes(id);
-    item.classList.toggle("on", on);
-  });
+  // Sync exercise grid (re-render fully to reflect deletions/custom exercises)
+  renderExerciseGrid();
 }
 
 // ══════════════════════════════════════════════════
@@ -838,6 +902,14 @@ function openSettings() {
 function closeSettings() {
   document.getElementById("overlay").classList.remove("open");
   document.getElementById("settings-panel").classList.remove("open");
+}
+
+// Returns all exercises available (built-in minus deleted, plus custom)
+function getActiveExercises() {
+  return [
+    ...EXERCISES.filter(e => !deletedExIds.includes(e.id)),
+    ...customExercises
+  ];
 }
 
 // ══════════════════════════════════════════════════
@@ -879,24 +951,89 @@ function buildSetup() {
 
   updateDiffDisplay();
   updateSeedDisplay();
+  renderExerciseGrid();
+}
 
-  // Exercises
+function renderExerciseGrid() {
   const eg = document.getElementById("ex-grid");
-  EXERCISES.forEach(ex => {
+  eg.innerHTML = "";
+  const allEx = getActiveExercises();
+
+  allEx.forEach(ex => {
+    const isOn = cfg.exIds.includes(ex.id);
+    const isCustom = !!customExercises.find(c => c.id === ex.id);
     const d = document.createElement("div");
-    d.className = "ex-item on";
+    d.className = "ex-item" + (isOn ? " on" : "");
     d.dataset.exid = ex.id;
-    d.innerHTML = `<div class="ex-check"><span class="ex-check-mark">✓</span></div>
-      <div><div class="ex-name">${ex.name}</div>
-      <div class="ex-tag">${ex.type === "hold" ? "Hold" : "Reps"}</div></div>`;
-    d.onclick = () => {
-      const on = d.classList.toggle("on");
-      if (on) cfg.exIds.push(ex.id);
-      else cfg.exIds = cfg.exIds.filter(x => x !== ex.id);
-      currentSeed = generateNewSeed(); updateSeedDisplay();
-    };
+    d.innerHTML = `
+      <div class="ex-check" onclick="toggleExercise('${ex.id}', this)"><span class="ex-check-mark">✓</span></div>
+      <div style="flex:1;min-width:0">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-tag">${ex.type === "hold" ? "Hold" : "Reps"}</div>
+      </div>
+      <button class="ex-del-btn" onclick="deleteExercise('${ex.id}', ${isCustom})" title="Delete">✕</button>`;
     eg.appendChild(d);
   });
+
+  // Add exercise button
+  const addBtn = document.createElement("div");
+  addBtn.className = "ex-add-btn";
+  addBtn.innerHTML = `<span style="font-size:18px;line-height:1">+</span><span>Add Exercise</span>`;
+  addBtn.onclick = () => showAddExerciseForm();
+  eg.appendChild(addBtn);
+}
+
+function toggleExercise(id, checkEl) {
+  const item = checkEl.closest('.ex-item');
+  const on = item.classList.toggle("on");
+  if (on) cfg.exIds.push(id);
+  else cfg.exIds = cfg.exIds.filter(x => x !== id);
+  currentSeed = generateNewSeed();
+  updateSeedDisplay();
+}
+
+function deleteExercise(id, isCustom) {
+  if (!confirm(`Remove this exercise permanently from this profile?`)) return;
+  if (isCustom) {
+    customExercises = customExercises.filter(e => e.id !== id);
+  } else {
+    deletedExIds.push(id);
+  }
+  cfg.exIds = cfg.exIds.filter(x => x !== id);
+  currentSeed = generateNewSeed();
+  updateSeedDisplay();
+  renderExerciseGrid();
+}
+
+function showAddExerciseForm() {
+  document.getElementById("add-ex-form").style.display = "block";
+  document.getElementById("new-ex-name").focus();
+}
+
+function submitNewExercise() {
+  const name = document.getElementById("new-ex-name").value.trim();
+  const desc = document.getElementById("new-ex-desc").value.trim();
+  const type = document.getElementById("new-ex-type").value;
+  if (!name) { showToast("Enter an exercise name"); return; }
+
+  const id = "custom_" + Date.now();
+  const ex = type === "hold"
+    ? { id, name, type:"hold", baseDur:10, rest:60, desc: desc || "Custom exercise" }
+    : { id, name, type:"reps", baseReps:5, rest:60, desc: desc || "Custom exercise" };
+
+  customExercises.push(ex);
+  cfg.exIds.push(id);
+  currentSeed = generateNewSeed();
+  updateSeedDisplay();
+
+  // Reset form
+  document.getElementById("new-ex-name").value = "";
+  document.getElementById("new-ex-desc").value = "";
+  document.getElementById("new-ex-type").value = "reps";
+  document.getElementById("add-ex-form").style.display = "none";
+
+  renderExerciseGrid();
+  showToast("Exercise added!");
 }
 
 function updateSeedDisplay() {
@@ -1000,7 +1137,7 @@ function generateWorkout(exPool, weekNum, dayIdx, rngSeed) {
 }
 
 function generate() {
-  const exPool = EXERCISES.filter(e => cfg.exIds.includes(e.id));
+  const exPool = getActiveExercises().filter(e => cfg.exIds.includes(e.id));
   if (exPool.length < 2) { showToast("Select at least 2 exercises"); return; }
   if (cfg.days.length === 0) { showToast("Select at least one training day"); return; }
 
@@ -1084,7 +1221,7 @@ function renderDayView() {
   let html = `<div class="workout-hdr" style="${isDone ? 'border-color:rgba(74,222,128,0.4);background:linear-gradient(135deg,#141f14,#0f1a0f)' : ''}">
     <div class="wh-meta">
       Week ${entry.week} · <strong>${entry.day}</strong><br>
-      ${exercises.length} exercises · <span style="color:${diffCol};font-weight:700">Level ${cfg.diff}</span>
+      ${exercises.length} exercises
     </div>
     <div class="wh-dur">⏱ ${estMins} min</div>
   </div>`;
