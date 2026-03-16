@@ -330,11 +330,6 @@ input[type=range]::-moz-range-thumb{
   font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;
   letter-spacing:0.06em;text-transform:uppercase;color:#000;transition:opacity 0.15s;
 }
-.add-ex-submit{
-  flex:2;padding:9px;background:var(--accent);border:none;border-radius:8px;
-  font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;
-  letter-spacing:0.06em;text-transform:uppercase;color:#000;transition:opacity 0.15s;
-}
 .add-ex-submit:hover{opacity:0.85}
 .add-ex-diff-row{
   display:flex;align-items:center;gap:10px;margin-top:8px;
@@ -353,6 +348,23 @@ input[type=range]::-moz-range-thumb{
   color:var(--accent);min-width:20px;text-align:center;
 }
 .add-ex-diff-note{font-size:10px;color:var(--muted);flex:1;text-align:right;line-height:1.3}
+
+/* Exercise feedback buttons */
+.ex-feedback-row{
+  display:flex;gap:8px;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--border);
+}
+.fb-btn{
+  flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg);font-size:16px;transition:all 0.15s;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0.4;
+}
+.fb-btn:hover{opacity:0.8;border-color:#555}
+.fb-btn.active{opacity:1}
+.fb-up.active{background:rgba(74,222,128,0.15);border-color:rgba(74,222,128,0.4)}
+.fb-mid.active{background:rgba(232,255,71,0.1);border-color:rgba(232,255,71,0.3)}
+.fb-down.active{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35)}
 
 .complete-wrap{padding:20px 0 8px;text-align:center}
 .complete-btn{
@@ -770,6 +782,7 @@ function loadAll() {
 }
 
 let completedDays = {}; // { planIdx: true }
+let exFeedback = {};    // { "planIdx_exId": "up"|"mid"|"down" }
 
 function saveCurrentProfile() {
   if (!activeProfileId) return;
@@ -780,6 +793,7 @@ function saveCurrentProfile() {
     currentDayIdx,
     currentView,
     completedDays,
+    exFeedback,
     customExercises,
     deletedExIds,
     exOverrides,
@@ -813,6 +827,7 @@ function loadProfile(id) {
   currentView = p.currentView || "day";
   currentSeed = p.seed || generateNewSeed();
   completedDays = p.completedDays || {};
+  exFeedback = p.exFeedback || {};
   customExercises = p.customExercises || [];
   deletedExIds = p.deletedExIds || [];
   exOverrides = p.exOverrides || {};
@@ -861,6 +876,7 @@ function createProfile() {
   currentSeed = baseSeed;
   plan = [];
   completedDays = {};
+  exFeedback = {};
   customExercises = [];
   deletedExIds = [];
   exOverrides = {};
@@ -1378,6 +1394,8 @@ function renderDayView() {
 
   exercises.forEach((item, i) => {
     const { ex, setsArr, patLabel } = item;
+    const feedbackKey = `${entry.idx}_${ex.id}`;
+    const fb = exFeedback[feedbackKey];
     let setsDisplay;
     if (ex.type === "hold") {
       setsDisplay = `${setsArr.length} × ${setsArr[0]}s hold`;
@@ -1390,6 +1408,11 @@ function renderDayView() {
         <div class="ec-pill">${setsDisplay}</div>
       </div>
       <div class="ec-desc">${ex.desc}</div>
+      <div class="ex-feedback-row">
+        <button class="fb-btn fb-up ${fb === 'up' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="up" onclick="setExFeedback('${feedbackKey}', 'up')" title="Felt good">👍</button>
+        <button class="fb-btn fb-mid ${fb === 'mid' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="mid" onclick="setExFeedback('${feedbackKey}', 'mid')" title="Okay">👊</button>
+        <button class="fb-btn fb-down ${fb === 'down' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="down" onclick="setExFeedback('${feedbackKey}', 'down')" title="Too hard">👎</button>
+      </div>
     </div>`;
   });
 
@@ -1402,6 +1425,23 @@ function renderDayView() {
   </div>`;
 
   content.innerHTML = html;
+}
+
+function setExFeedback(key, val) {
+  // Toggle off if tapping same button again
+  if (exFeedback[key] === val) {
+    delete exFeedback[key];
+  } else {
+    exFeedback[key] = val;
+  }
+  // Update just the buttons without re-rendering the whole view
+  const btns = document.querySelectorAll(`[data-fbkey="${key}"]`);
+  btns.forEach(b => b.classList.remove("active"));
+  if (exFeedback[key]) {
+    const active = document.querySelector(`[data-fbkey="${key}"][data-fbval="${exFeedback[key]}"]`);
+    if (active) active.classList.add("active");
+  }
+  saveCurrentProfile();
 }
 
 function toggleComplete(idx) {
