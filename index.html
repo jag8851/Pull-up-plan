@@ -185,6 +185,25 @@ input[type=range]::-moz-range-thumb{
 }
 .seed-copy-btn:hover{border-color:var(--accent);color:var(--accent)}
 
+/* Goal box */
+.goal-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.goal-input-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.goal-controls{display:flex;align-items:center;gap:8px}
+.goal-btn{
+  width:32px;height:32px;border-radius:50%;background:var(--bg);
+  border:1px solid var(--border);color:var(--text);font-size:18px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+}
+.goal-btn:hover{border-color:var(--accent);color:var(--accent)}
+.goal-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--accent);min-width:28px;text-align:center}
+.goal-estimate{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.goal-progress-bar{height:6px;background:var(--dim);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.goal-progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width 0.4s}
+.goal-meta{font-size:12px;color:#888;margin-bottom:4px}
+.goal-meta strong{color:var(--text)}
+.goal-eta{font-size:12px;color:#666;line-height:1.5}
+.goal-eta strong{color:#aaa}
+
 .generate-btn{
   width:100%;padding:17px;border:none;border-radius:12px;
   background:var(--accent);color:#000;
@@ -253,17 +272,27 @@ input[type=range]::-moz-range-thumb{
   animation:slideUp 0.28s ease both;
 }
 @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.ec-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.ec-name{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;text-transform:uppercase;line-height:1}
+.ec-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ec-name{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;text-transform:uppercase;line-height:1;flex:1}
 .ec-cat{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-top:3px;opacity:0.45}
+.ec-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
 .ec-pill{
   font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;
   background:rgba(232,255,71,0.08);border:1px solid rgba(232,255,71,0.18);
-  border-radius:7px;padding:5px 11px;color:var(--accent);white-space:nowrap;flex-shrink:0;
+  border-radius:7px;padding:5px 11px;color:var(--accent);white-space:nowrap;
 }
-.ec-bottom{display:flex;gap:18px;margin-top:11px;padding-top:11px;border-top:1px solid var(--border)}
-.ec-stat{font-size:11px;color:var(--muted)}
-.ec-stat strong{color:#999;font-weight:600}
+.ex-feedback-row{display:flex;gap:4px}
+.fb-btn{
+  width:28px;height:28px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg);font-size:13px;transition:all 0.15s;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0.35;padding:0;
+}
+.fb-btn:hover{opacity:0.75;border-color:#555}
+.fb-btn.active{opacity:1}
+.fb-up.active{background:rgba(74,222,128,0.15);border-color:rgba(74,222,128,0.4)}
+.fb-mid.active{background:rgba(232,255,71,0.1);border-color:rgba(232,255,71,0.3)}
+.fb-down.active{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35)}
 .ec-desc{font-size:10px;color:#444;margin-top:7px;font-style:italic}
 
 /* Summary view */
@@ -349,18 +378,16 @@ input[type=range]::-moz-range-thumb{
 }
 .add-ex-diff-note{font-size:10px;color:var(--muted);flex:1;text-align:right;line-height:1.3}
 
-/* Exercise feedback buttons */
-.ex-feedback-row{
-  display:flex;gap:8px;margin-top:10px;padding-top:10px;
-  border-top:1px solid var(--border);
-}
+/* Exercise feedback buttons — inline beside pill */
+.ec-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.ex-feedback-row{display:flex;gap:4px}
 .fb-btn{
-  flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);
-  background:var(--bg);font-size:16px;transition:all 0.15s;
+  width:30px;height:30px;border-radius:7px;border:1px solid var(--border);
+  background:var(--bg);font-size:14px;transition:all 0.15s;
   display:flex;align-items:center;justify-content:center;
-  opacity:0.4;
+  opacity:0.35;padding:0;
 }
-.fb-btn:hover{opacity:0.8;border-color:#555}
+.fb-btn:hover{opacity:0.75;border-color:#555}
 .fb-btn.active{opacity:1}
 .fb-up.active{background:rgba(74,222,128,0.15);border-color:rgba(74,222,128,0.4)}
 .fb-mid.active{background:rgba(232,255,71,0.1);border-color:rgba(232,255,71,0.3)}
@@ -530,6 +557,22 @@ input[type=range]::-moz-range-thumb{
     <div class="setup-body">
 
       <div class="section">
+        <div class="section-label">Pull-Up Goal</div>
+        <div class="goal-box">
+          <div class="goal-input-row">
+            <span class="slider-lbl">My goal is</span>
+            <div class="goal-controls">
+              <button class="goal-btn" onclick="changeGoal(-1)">−</button>
+              <span class="goal-val" id="goal-val">1</span>
+              <button class="goal-btn" onclick="changeGoal(1)">+</button>
+            </div>
+            <span class="slider-lbl">pull-up<span id="goal-plural">s</span></span>
+          </div>
+          <div class="goal-estimate" id="goal-estimate"></div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="section-label">Training Days</div>
         <div class="days-grid" id="days-grid"></div>
       </div>
@@ -677,18 +720,18 @@ input[type=range]::-moz-range-thumb{
 // EXERCISE DATABASE
 // ══════════════════════════════════════════════════
 const EXERCISES = [
-  {id:"deadhang",   name:"Dead Hang",          type:"hold", baseDur:10, rest:60,  desc:"Hang from bar completely relaxed, arms straight"},
-  {id:"activehang", name:"Active Dead Hang",   type:"hold", baseDur:8,  rest:60,  desc:"Hang with shoulder blades pulled down and back"},
-  {id:"scappull",   name:"Scap Pull-Ups",       type:"reps", baseReps:4, rest:45,  desc:"Tiny up/down movement from shoulder blades only, no arm bend"},
+  {id:"deadhang",   name:"Dead Hang",          type:"hold", baseDur:30, rest:60,  desc:"Hang from bar completely relaxed, arms straight"},
+  {id:"activehang", name:"Active Dead Hang",   type:"hold", baseDur:20, rest:60,  desc:"Hang with shoulder blades pulled down and back"},
+  {id:"scappull",   name:"Scap Pull-Ups",       type:"reps", baseReps:5, rest:45,  desc:"Tiny up/down movement from shoulder blades only, no arm bend"},
   {id:"negative",   name:"Negative Pull-Ups",  type:"reps", baseReps:2, rest:90,  desc:"Jump to top, lower yourself as slowly as possible"},
-  {id:"banded",     name:"Banded Pull-Ups",     type:"reps", baseReps:3, rest:90,  desc:"Band around bar reduces your bodyweight for assisted reps"},
-  {id:"hollow",     name:"Hollow Body Hold",    type:"hold", baseDur:15, rest:45,  desc:"On floor, press lower back down and hold the position"},
-  {id:"tuck",       name:"Tuck Hold",           type:"hold", baseDur:12, rest:45,  desc:"Hang from bar with knees tucked to chest"},
-  {id:"bandpa",     name:"Band Pull-Aparts",    type:"reps", baseReps:8, rest:45,  desc:"Pull a resistance band apart at chest height"},
-  {id:"flexarm",    name:"Flexed Arm Hang",     type:"hold", baseDur:5,  rest:90,  desc:"Hold with chin above bar, arms bent, isometric"},
-  {id:"jumppu",     name:"Jumping Pull-Up",     type:"reps", baseReps:4, rest:75,  desc:"Use legs to help get chin over bar, builds the movement pattern"},
-  {id:"chinup",     name:"Chin-Up",             type:"reps", baseReps:2, rest:90,  desc:"Underhand grip pull-up, a good stepping stone toward overhand"},
-  {id:"pushup",     name:"Push-Up",             type:"reps", baseReps:8, rest:60,  desc:"Standard push-up, builds pushing strength to balance pulling work"},
+  {id:"banded",     name:"Banded Pull-Ups",     type:"reps", baseReps:2, rest:90,  desc:"Band around bar reduces your bodyweight for assisted reps"},
+  {id:"hollow",     name:"Hollow Body Hold",    type:"hold", baseDur:10, rest:45,  desc:"On floor, press lower back down and hold the position"},
+  {id:"tuck",       name:"Tuck Hold",           type:"hold", baseDur:10, rest:45,  desc:"Hang from bar with knees tucked to chest"},
+  {id:"bandpa",     name:"Band Pull-Aparts",    type:"reps", baseReps:5, rest:45,  desc:"Pull a resistance band apart at chest height"},
+  {id:"flexarm",    name:"Flexed Arm Hang",     type:"hold", baseDur:20, rest:90,  desc:"Hold with chin above bar, arms bent, isometric"},
+  {id:"jumppu",     name:"Jumping Pull-Up",     type:"reps", baseReps:1, rest:75,  desc:"Use legs to help get chin over bar, builds the movement pattern"},
+  {id:"chinup",     name:"Chin-Up",             type:"reps", baseReps:1, rest:90,  desc:"Underhand grip pull-up, a good stepping stone toward overhand"},
+  {id:"pushup",     name:"Push-Up",             type:"reps", baseReps:10, rest:60, desc:"Standard push-up, builds pushing strength to balance pulling work"},
 ];
 
 const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -700,7 +743,7 @@ const STORAGE_KEY = "pullup_v2";
 let activeProfileId = null;
 let profiles = {}; // { id: { name, seed, cfg, plan, currentDayIdx, currentView, savedAt } }
 
-let cfg = { days:["Mon","Wed","Fri"], weeks:4, mins:10, diff:5, prog:8, exIds:EXERCISES.map(e=>e.id) };
+let cfg = { days:["Mon","Wed","Fri"], weeks:4, mins:10, diff:5, prog:8, goal:1, exIds:EXERCISES.map(e=>e.id) };
 let plan = [];
 let currentDayIdx = 0;
 let currentView = "day";
@@ -982,6 +1025,7 @@ function syncSetupUI() {
   document.getElementById("prog-val").textContent = "+" + cfg.prog + "%";
   updateDiffDisplay();
   updateSeedDisplay();
+  initGoalUI();
 
   // Sync day buttons
   document.querySelectorAll(".day-btn").forEach(b => {
@@ -1038,20 +1082,24 @@ function buildSetup() {
     cfg.weeks = +e.target.value;
     document.getElementById("weeks-val").textContent = cfg.weeks;
     currentSeed = generateNewSeed(); updateSeedDisplay();
+    updateGoalEstimate();
   });
   document.getElementById("mins-slider").addEventListener("input", e => {
     cfg.mins = +e.target.value;
     document.getElementById("mins-val").textContent = cfg.mins + " min";
     currentSeed = generateNewSeed(); updateSeedDisplay();
+    updateGoalEstimate();
   });
   document.getElementById("prog-slider").addEventListener("input", e => {
     cfg.prog = +e.target.value;
     document.getElementById("prog-val").textContent = "+" + cfg.prog + "%";
     currentSeed = generateNewSeed(); updateSeedDisplay();
+    updateGoalEstimate();
   });
 
   updateDiffDisplay();
   updateSeedDisplay();
+  initGoalUI();
   renderExerciseGrid();
 }
 
@@ -1160,6 +1208,76 @@ function deleteExercise(id, isCustom) {
 
 let newExDiff = 5;
 
+function changeGoal(d) {
+  cfg.goal = Math.max(1, Math.min(30, (cfg.goal || 1) + d));
+  document.getElementById("goal-val").textContent = cfg.goal;
+  document.getElementById("goal-plural").textContent = cfg.goal === 1 ? "" : "s";
+  updateGoalEstimate();
+}
+
+function updateGoalEstimate() {
+  const el = document.getElementById("goal-estimate");
+  if (!el) return;
+  const goal = cfg.goal || 1;
+  const daysPerWeek = cfg.days.length;
+  const prog = cfg.prog;       // 2–20, baseline 8
+  const planWeeks = cfg.weeks;
+  const intensity = cfg.diff;  // 1–10, baseline 5
+  const mins = cfg.mins;       // 5–30, baseline 15
+
+  // Anchor: beginner, 3x/week, 8% prog, intensity 5, 15min → ~5 weeks to first pull-up
+  let weeksNeeded = 5;
+
+  // Days/week — biggest lever (baseline 3)
+  weeksNeeded *= (3 / daysPerWeek);
+
+  // Progression % — how fast you overload (baseline 8)
+  weeksNeeded *= (8 / prog);
+
+  // Workout length — more time = more volume (baseline 15min)
+  // Weighted at 0.5 strength so it doesn't swing too wildly
+  weeksNeeded *= Math.pow(15 / mins, 0.5);
+
+  // Intensity — harder sessions build strength faster (baseline 5)
+  // Weighted at 0.4 strength — real but smaller effect
+  weeksNeeded *= Math.pow(5 / intensity, 0.4);
+
+  // Each extra pull-up beyond 1 adds ~2 more weeks
+  weeksNeeded += (goal - 1) * 2;
+
+  weeksNeeded = Math.max(1, Math.round(weeksNeeded));
+
+  const pct = Math.min(98, Math.round((planWeeks / weeksNeeded) * 100));
+
+  let statusMsg, statusColor;
+  if (planWeeks >= weeksNeeded) {
+    statusMsg = `Your ${planWeeks}-week plan should be enough to get there. 💪`;
+    statusColor = "#4ade80";
+  } else {
+    const shortBy = weeksNeeded - planWeeks;
+    statusMsg = `Your plan is ${shortBy} week${shortBy === 1 ? '' : 's'} short — consider extending it.`;
+    statusColor = "#ff9147";
+  }
+
+  el.innerHTML = `
+    <div class="goal-progress-bar">
+      <div class="goal-progress-fill" style="width:${pct}%"></div>
+    </div>
+    <div class="goal-meta" style="margin-bottom:6px">
+      Estimated to reach ${goal} pull-up${goal === 1 ? '' : 's'}: <strong>~${weeksNeeded} week${weeksNeeded === 1 ? '' : 's'}</strong>
+      <span style="color:var(--muted)"> · ${daysPerWeek}×/week · ${mins}min · intensity ${intensity} · +${prog}%/week</span>
+    </div>
+    <div style="font-size:12px;color:${statusColor}">${statusMsg}</div>
+    <div style="font-size:10px;color:#444;margin-top:5px">Everyone progresses differently — treat this as a rough guide.</div>`;
+}
+
+// ── INIT GOAL UI ──
+function initGoalUI() {
+  document.getElementById("goal-val").textContent = cfg.goal || 1;
+  document.getElementById("goal-plural").textContent = (cfg.goal || 1) === 1 ? "" : "s";
+  updateGoalEstimate();
+}
+
 function changeNewExDiff(d) {
   newExDiff = Math.max(1, Math.min(10, newExDiff + d));
   document.getElementById("new-ex-diff-val").textContent = newExDiff;
@@ -1234,6 +1352,7 @@ function adjustDiff(d) {
   cfg.diff = Math.max(1, Math.min(10, cfg.diff + d));
   if (cfg.diff !== prev) lastDiffDir = d;
   updateDiffDisplay();
+  updateGoalEstimate();
 }
 
 function updateDiffDisplay() {
@@ -1259,11 +1378,10 @@ const PATTERNS = [
   { label:"1-2-3",    minSets:5, fixedSets:5, build:(base) => [1,2,3,2,1].map(x => Math.max(1, base*x)) },
 ];
 
-function diffMultiplier() { return 0.4 + (cfg.diff - 1) * 0.18; }
-
 function generateWorkout(exPool, weekNum, dayIdx, rngSeed) {
   const rng = seededRand(rngSeed);
-  const mult = diffMultiplier() * (1 + weekNum * (cfg.prog / 100));
+  // weekMult: week 1 = 1.0, grows each week by prog%
+  const weekMult = 1 + weekNum * (cfg.prog / 100);
   const targetSecs = cfg.mins * 60;
   const exercises = [];
   let totalSecs = 0;
@@ -1272,30 +1390,59 @@ function generateWorkout(exPool, weekNum, dayIdx, rngSeed) {
   for (const ex of shuffled) {
     if (totalSecs >= targetSecs * 0.85) break;
 
-    let baseVal, unit, setsArr, patLabel;
+    let unit, setsArr, patLabel;
 
     if (ex.type === "hold") {
-      // Holds: always straight sets, no pattern, 2-3 sets
-      const sets = 2 + Math.floor(rng() * 2);
+      // base = your max hold in week 1.
+      // Week 1: work at ~70% of max. Each week scales up toward and past base.
       const base = exOverrides[ex.id]?.baseDur ?? ex.baseDur;
-      baseVal = Math.max(3, Math.round(base * mult));
+      const target = Math.max(3, Math.round(base * 0.7 * weekMult));
+      const sets = 2 + Math.floor(rng() * 2); // 2-3 sets
+      // All sets same duration for holds — simple and honest
+      setsArr = Array(sets).fill(target);
       unit = "s";
-      setsArr = Array(sets).fill(baseVal);
       patLabel = null;
+
     } else {
-      // Reps: pick a random set count first, then only choose patterns that fit
-      const sets = 2 + Math.floor(rng() * 4); // 2-5 sets
-      const validPatterns = PATTERNS.filter(p => sets >= p.minSets);
-      const pat = validPatterns[Math.floor(rng() * validPatterns.length)];
-      const actualSets = pat.fixedSets || sets;
+      // base = your absolute max reps for a single set in week 1.
+      // Week 1 starts at ~60% of base so you're never at your limit on set 1.
+      // Each week multiplies that working value upward.
       const base = exOverrides[ex.id]?.baseReps ?? ex.baseReps;
-      baseVal = Math.max(1, Math.round(base * mult));
+      // Working max = base * 60% in week 1, growing each week
+      const workingMax = Math.max(1, Math.round(base * 0.6 * weekMult));
+      const sets = 2 + Math.floor(rng() * 3); // 2-4 sets
+
+      if (workingMax <= 1) {
+        // Only 1 rep possible — straight sets
+        setsArr = Array(sets).fill(1);
+        patLabel = "Straight";
+      } else if (workingMax === 2) {
+        // 2 reps max — simple drop: 2, 1 or straight 2,2
+        const drop = rng() > 0.5;
+        setsArr = drop ? [2, 1, 1].slice(0, sets) : Array(sets).fill(2);
+        patLabel = drop ? "Drop Set" : "Straight";
+      } else {
+        // 3+ reps — use patterns, all capped at workingMax
+        const validPatterns = PATTERNS.filter(p => sets >= p.minSets);
+        const pat = validPatterns[Math.floor(rng() * validPatterns.length)];
+        const actualSets = pat.fixedSets || sets;
+        // Calculate genBase so that the PEAK of the pattern = workingMax
+        let genBase;
+        switch(pat.label) {
+          case "Ladder":   genBase = Math.max(1, workingMax - (actualSets - 1)); break;
+          case "Pyramid":  genBase = Math.max(1, workingMax - (Math.ceil(actualSets/2) - 1)); break;
+          case "Drop Set": genBase = workingMax; break;
+          case "1-2-3":    genBase = Math.max(1, Math.floor(workingMax / 3)); break;
+          default:         genBase = workingMax; // Straight
+        }
+        setsArr = pat.build(genBase, actualSets);
+        patLabel = pat.label;
+      }
       unit = "reps";
-      setsArr = pat.build(baseVal, actualSets);
-      patLabel = pat.label;
     }
 
-    const exSecs = setsArr.length * (ex.type === "hold" ? baseVal + ex.rest : baseVal * 3 + ex.rest);
+    const peakVal = Math.max(...setsArr);
+    const exSecs = setsArr.length * (ex.type === "hold" ? peakVal + ex.rest : peakVal * 3 + ex.rest);
     totalSecs += exSecs;
     exercises.push({ ex, setsArr, unit, patLabel, rest: ex.rest });
   }
@@ -1405,14 +1552,16 @@ function renderDayView() {
     html += `<div class="ex-card" style="animation-delay:${i * 0.055}s">
       <div class="ec-top">
         <div><div class="ec-name">${ex.name}</div></div>
-        <div class="ec-pill">${setsDisplay}</div>
+        <div class="ec-right">
+          <div class="ec-pill">${setsDisplay}</div>
+          <div class="ex-feedback-row">
+            <button class="fb-btn fb-up ${fb === 'up' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="up" onclick="setExFeedback('${feedbackKey}', 'up')" title="Felt good">👍</button>
+            <button class="fb-btn fb-mid ${fb === 'mid' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="mid" onclick="setExFeedback('${feedbackKey}', 'mid')" title="Okay">😐</button>
+            <button class="fb-btn fb-down ${fb === 'down' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="down" onclick="setExFeedback('${feedbackKey}', 'down')" title="Too hard">👎</button>
+          </div>
+        </div>
       </div>
       <div class="ec-desc">${ex.desc}</div>
-      <div class="ex-feedback-row">
-        <button class="fb-btn fb-up ${fb === 'up' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="up" onclick="setExFeedback('${feedbackKey}', 'up')" title="Felt good">👍</button>
-        <button class="fb-btn fb-mid ${fb === 'mid' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="mid" onclick="setExFeedback('${feedbackKey}', 'mid')" title="Okay">👊</button>
-        <button class="fb-btn fb-down ${fb === 'down' ? 'active' : ''}" data-fbkey="${feedbackKey}" data-fbval="down" onclick="setExFeedback('${feedbackKey}', 'down')" title="Too hard">👎</button>
-      </div>
     </div>`;
   });
 
