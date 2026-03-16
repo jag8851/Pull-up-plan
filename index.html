@@ -132,8 +132,31 @@ input[type=range]::-moz-range-thumb{
 @media(max-width:480px){.ex-grid{grid-template-columns:1fr}}
 .ex-item{
   background:var(--card);border:1px solid var(--border);border-radius:10px;
-  padding:11px 13px;cursor:pointer;transition:all 0.15s;display:flex;align-items:flex-start;gap:9px;
+  padding:11px 13px;cursor:pointer;transition:all 0.15s;
+  flex-direction:column;display:flex;
 }
+.ex-item-main{display:flex;align-items:flex-start;gap:9px;width:100%}
+.ex-edit-row{
+  display:none;align-items:center;gap:10px;margin-top:10px;
+  padding-top:10px;border-top:1px solid var(--border);
+}
+.ex-edit-label{font-size:11px;color:var(--muted);flex:1}
+.ex-edit-controls{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ex-edit-btn{
+  width:26px;height:26px;border-radius:50%;background:var(--bg);
+  border:1px solid var(--border);color:var(--text);font-size:15px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;line-height:1;
+}
+.ex-edit-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ex-edit-val{
+  font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;
+  color:var(--accent);min-width:24px;text-align:center;
+}
+.ex-reset-btn{
+  font-size:10px;color:var(--muted);background:none;border:1px solid var(--border);
+  border-radius:5px;padding:3px 7px;transition:all 0.15s;flex-shrink:0;
+}
+.ex-reset-btn:hover{border-color:#ef4444;color:#ef4444}
 .ex-item.on{border-color:rgba(232,255,71,0.4);background:#191f00}
 .ex-item:hover:not(.on){border-color:#3a3a3a}
 .ex-check{
@@ -647,13 +670,13 @@ const EXERCISES = [
   {id:"scappull",   name:"Scap Pull-Ups",       type:"reps", baseReps:4, rest:45,  desc:"Tiny up/down movement from shoulder blades only, no arm bend"},
   {id:"negative",   name:"Negative Pull-Ups",  type:"reps", baseReps:2, rest:90,  desc:"Jump to top, lower yourself as slowly as possible"},
   {id:"banded",     name:"Banded Pull-Ups",     type:"reps", baseReps:3, rest:90,  desc:"Band around bar reduces your bodyweight for assisted reps"},
-  {id:"chinhold",   name:"Chin-Up Hold",        type:"hold", baseDur:8,  rest:60,  desc:"Hold yourself with chin over the bar as long as possible"},
   {id:"hollow",     name:"Hollow Body Hold",    type:"hold", baseDur:15, rest:45,  desc:"On floor, press lower back down and hold the position"},
   {id:"tuck",       name:"Tuck Hold",           type:"hold", baseDur:12, rest:45,  desc:"Hang from bar with knees tucked to chest"},
   {id:"bandpa",     name:"Band Pull-Aparts",    type:"reps", baseReps:8, rest:45,  desc:"Pull a resistance band apart at chest height"},
   {id:"flexarm",    name:"Flexed Arm Hang",     type:"hold", baseDur:5,  rest:90,  desc:"Hold with chin above bar, arms bent, isometric"},
   {id:"jumppu",     name:"Jumping Pull-Up",     type:"reps", baseReps:4, rest:75,  desc:"Use legs to help get chin over bar, builds the movement pattern"},
   {id:"chinup",     name:"Chin-Up",             type:"reps", baseReps:2, rest:90,  desc:"Underhand grip pull-up, a good stepping stone toward overhand"},
+  {id:"pushup",     name:"Push-Up",             type:"reps", baseReps:8, rest:60,  desc:"Standard push-up, builds pushing strength to balance pulling work"},
 ];
 
 const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -672,6 +695,7 @@ let currentView = "day";
 let currentSeed = generateNewSeed();
 let customExercises = []; // [{id, name, type, desc, baseReps/baseDur, rest}]
 let deletedExIds = [];    // built-in exercise ids permanently removed
+let exOverrides = {};     // { exId: { baseReps or baseDur } } — user-set base values
 
 // ══════════════════════════════════════════════════
 // SEED UTILS — seed encodes full config
@@ -758,6 +782,7 @@ function saveCurrentProfile() {
     completedDays,
     customExercises,
     deletedExIds,
+    exOverrides,
     seed: currentSeed,
     savedAt: Date.now()
   };
@@ -790,6 +815,7 @@ function loadProfile(id) {
   completedDays = p.completedDays || {};
   customExercises = p.customExercises || [];
   deletedExIds = p.deletedExIds || [];
+  exOverrides = p.exOverrides || {};
   updateChip();
   saveAll();
 }
@@ -837,6 +863,7 @@ function createProfile() {
   completedDays = {};
   customExercises = [];
   deletedExIds = [];
+  exOverrides = {};
 
   nameEl.value = "";
   seedEl.value = "";
@@ -1020,16 +1047,34 @@ function renderExerciseGrid() {
   allEx.forEach(ex => {
     const isOn = cfg.exIds.includes(ex.id);
     const isCustom = !!customExercises.find(c => c.id === ex.id);
+    const override = exOverrides[ex.id];
+    const baseVal = ex.type === "hold"
+      ? (override?.baseDur ?? ex.baseDur)
+      : (override?.baseReps ?? ex.baseReps);
+    const unit = ex.type === "hold" ? "s" : "reps";
+    const hasOverride = override !== undefined;
+
     const d = document.createElement("div");
     d.className = "ex-item" + (isOn ? " on" : "");
     d.dataset.exid = ex.id;
     d.innerHTML = `
-      <div class="ex-check" onclick="toggleExercise('${ex.id}', this)"><span class="ex-check-mark">✓</span></div>
-      <div style="flex:1;min-width:0">
-        <div class="ex-name">${ex.name}</div>
-        <div class="ex-tag">${ex.type === "hold" ? "Hold" : "Reps"}${isCustom && ex.difficulty ? ` · Difficulty ${ex.difficulty}` : ''}</div>
+      <div class="ex-item-main">
+        <div class="ex-check" onclick="toggleExercise('${ex.id}', this)"><span class="ex-check-mark">✓</span></div>
+        <div style="flex:1;min-width:0" onclick="toggleExEdit('${ex.id}')">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-tag">${ex.type === "hold" ? "Hold" : "Reps"} · Base: ${baseVal}${unit}${isCustom && ex.difficulty ? ` · Diff ${ex.difficulty}` : ''}${hasOverride ? ' ✎' : ''}</div>
+        </div>
+        <button class="ex-del-btn" onclick="deleteExercise('${ex.id}', ${isCustom})" title="Delete">✕</button>
       </div>
-      <button class="ex-del-btn" onclick="deleteExercise('${ex.id}', ${isCustom})" title="Delete">✕</button>`;
+      <div class="ex-edit-row" id="ex-edit-${ex.id}" style="display:none">
+        <span class="ex-edit-label">Base ${ex.type === "hold" ? "hold (seconds)" : "reps"}</span>
+        <div class="ex-edit-controls">
+          <button class="ex-edit-btn" onclick="changeExBase('${ex.id}', '${ex.type}', -1)">−</button>
+          <span class="ex-edit-val" id="ex-base-val-${ex.id}">${baseVal}</span>
+          <button class="ex-edit-btn" onclick="changeExBase('${ex.id}', '${ex.type}', 1)">+</button>
+        </div>
+        ${hasOverride ? `<button class="ex-reset-btn" onclick="resetExBase('${ex.id}')">Reset</button>` : ''}
+      </div>`;
     eg.appendChild(d);
   });
 
@@ -1039,6 +1084,40 @@ function renderExerciseGrid() {
   addBtn.innerHTML = `<span style="font-size:18px;line-height:1">+</span><span>Add Exercise</span>`;
   addBtn.onclick = () => showAddExerciseForm();
   eg.appendChild(addBtn);
+}
+
+function toggleExEdit(id) {
+  const row = document.getElementById("ex-edit-" + id);
+  if (!row) return;
+  row.style.display = row.style.display === "none" ? "flex" : "none";
+}
+
+function changeExBase(id, type, delta) {
+  const ex = getActiveExercises().find(e => e.id === id);
+  if (!ex) return;
+  const current = type === "hold"
+    ? (exOverrides[id]?.baseDur ?? ex.baseDur)
+    : (exOverrides[id]?.baseReps ?? ex.baseReps);
+  const min = type === "hold" ? 3 : 1;
+  const newVal = Math.max(min, current + delta);
+  if (!exOverrides[id]) exOverrides[id] = {};
+  if (type === "hold") exOverrides[id].baseDur = newVal;
+  else exOverrides[id].baseReps = newVal;
+  document.getElementById("ex-base-val-" + id).textContent = newVal;
+  currentSeed = generateNewSeed();
+  updateSeedDisplay();
+}
+
+function resetExBase(id) {
+  delete exOverrides[id];
+  currentSeed = generateNewSeed();
+  updateSeedDisplay();
+  renderExerciseGrid();
+  // Re-open the edit row
+  setTimeout(() => {
+    const row = document.getElementById("ex-edit-" + id);
+    if (row) row.style.display = "flex";
+  }, 10);
 }
 
 function toggleExercise(id, checkEl) {
@@ -1182,17 +1261,19 @@ function generateWorkout(exPool, weekNum, dayIdx, rngSeed) {
     if (ex.type === "hold") {
       // Holds: always straight sets, no pattern, 2-3 sets
       const sets = 2 + Math.floor(rng() * 2);
-      baseVal = Math.max(5, Math.round(ex.baseDur * mult));
+      const base = exOverrides[ex.id]?.baseDur ?? ex.baseDur;
+      baseVal = Math.max(3, Math.round(base * mult));
       unit = "s";
       setsArr = Array(sets).fill(baseVal);
-      patLabel = null; // no pattern for holds
+      patLabel = null;
     } else {
       // Reps: pick a random set count first, then only choose patterns that fit
       const sets = 2 + Math.floor(rng() * 4); // 2-5 sets
       const validPatterns = PATTERNS.filter(p => sets >= p.minSets);
       const pat = validPatterns[Math.floor(rng() * validPatterns.length)];
       const actualSets = pat.fixedSets || sets;
-      baseVal = Math.max(1, Math.round(ex.baseReps * mult));
+      const base = exOverrides[ex.id]?.baseReps ?? ex.baseReps;
+      baseVal = Math.max(1, Math.round(base * mult));
       unit = "reps";
       setsArr = pat.build(baseVal, actualSets);
       patLabel = pat.label;
