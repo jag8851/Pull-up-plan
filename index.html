@@ -294,6 +294,20 @@ input[type=range]::-moz-range-thumb{
 .fb-mid.active{background:rgba(232,255,71,0.1);border-color:rgba(232,255,71,0.3)}
 .fb-down.active{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35)}
 .ec-desc{font-size:10px;color:#444;margin-top:7px;font-style:italic}
+.ec-name-wrap{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
+.ex-refresh-btn{
+  background:none;border:1px solid var(--border);border-radius:6px;
+  color:var(--muted);font-size:14px;padding:2px 6px;transition:all 0.15s;
+  flex-shrink:0;line-height:1;
+}
+.ex-refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+.resume-plan-btn{
+  width:100%;margin-top:10px;padding:14px;border-radius:12px;
+  background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;
+  letter-spacing:0.1em;text-transform:uppercase;transition:all 0.2s;
+}
+.resume-plan-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Summary view */
 #summary-view{padding:16px;max-width:760px;margin:0 auto}
@@ -659,6 +673,7 @@ input[type=range]::-moz-range-thumb{
       </div>
 
       <button class="generate-btn" onclick="generate()">Generate My Plan →</button>
+      <button class="resume-plan-btn" id="resume-plan-btn" onclick="resumePlan()" style="display:none">Resume Existing Plan</button>
     </div>
   </div>
 
@@ -1504,7 +1519,19 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
-function goSetup() { showScreen("setup"); }
+function goSetup() {
+  showScreen("setup");
+  // Show resume button only if there's an existing plan
+  const btn = document.getElementById("resume-plan-btn");
+  if (btn) btn.style.display = plan && plan.length > 0 ? "block" : "none";
+}
+
+function resumePlan() {
+  if (!plan || plan.length === 0) return;
+  showScreen("plan");
+  setView(currentView);
+  if (currentView === "day") renderDayView();
+}
 
 // ══════════════════════════════════════════════════
 // RENDER: DAY VIEW
@@ -1549,9 +1576,12 @@ function renderDayView() {
     } else {
       setsDisplay = setsArr.length > 1 ? setsArr.join(" → ") + " reps" : setsArr[0] + " reps";
     }
-    html += `<div class="ex-card" style="animation-delay:${i * 0.055}s">
+    html += `<div class="ex-card" style="animation-delay:${i * 0.055}s" id="ex-card-${entry.idx}-${i}">
       <div class="ec-top">
-        <div><div class="ec-name">${ex.name}</div></div>
+        <div class="ec-name-wrap">
+          <div class="ec-name">${ex.name}</div>
+          <button class="ex-refresh-btn" onclick="refreshExercise(${entry.idx}, ${i})" title="Swap this exercise">↻</button>
+        </div>
         <div class="ec-right">
           <div class="ec-pill">${setsDisplay}</div>
           <div class="ex-feedback-row">
@@ -1591,6 +1621,68 @@ function setExFeedback(key, val) {
     if (active) active.classList.add("active");
   }
   saveCurrentProfile();
+}
+
+function refreshExercise(dayIdx, exIdx) {
+  const entry = plan[dayIdx];
+  if (!entry || !entry.workout) return;
+
+  const exPool = getActiveExercises().filter(e => cfg.exIds.includes(e.id));
+  const currentIds = entry.workout.exercises.map(e => e.ex.id);
+  // Pool of exercises not already in this day's workout
+  const available = exPool.filter(e => !currentIds.includes(e.id));
+
+  if (available.length === 0) {
+    showToast("No other exercises to swap in!");
+    return;
+  }
+
+  // Pick a random replacement
+  const replacement = available[Math.floor(Math.random() * available.length)];
+  const weekNum = entry.week - 1;
+  const weekMult = 1 + weekNum * (cfg.prog / 100);
+  const rng = seededRand(Date.now() + exIdx);
+
+  let unit, setsArr, patLabel;
+  if (replacement.type === "hold") {
+    const base = exOverrides[replacement.id]?.baseDur ?? replacement.baseDur;
+    const target = Math.max(3, Math.round(base * 0.7 * weekMult));
+    const sets = 2 + Math.floor(rng() * 2);
+    setsArr = Array(sets).fill(target);
+    unit = "s";
+    patLabel = null;
+  } else {
+    const base = exOverrides[replacement.id]?.baseReps ?? replacement.baseReps;
+    const workingMax = Math.max(1, Math.round(base * 0.6 * weekMult));
+    const sets = 2 + Math.floor(rng() * 3);
+    if (workingMax <= 1) {
+      setsArr = Array(sets).fill(1);
+      patLabel = "Straight";
+    } else if (workingMax === 2) {
+      setsArr = rng() > 0.5 ? [2,1,1].slice(0,sets) : Array(sets).fill(2);
+      patLabel = rng() > 0.5 ? "Drop Set" : "Straight";
+    } else {
+      const validPatterns = PATTERNS.filter(p => sets >= p.minSets);
+      const pat = validPatterns[Math.floor(rng() * validPatterns.length)];
+      const actualSets = pat.fixedSets || sets;
+      let genBase;
+      switch(pat.label) {
+        case "Ladder":   genBase = Math.max(1, workingMax - (actualSets-1)); break;
+        case "Pyramid":  genBase = Math.max(1, workingMax - (Math.ceil(actualSets/2)-1)); break;
+        case "Drop Set": genBase = workingMax; break;
+        case "1-2-3":    genBase = Math.max(1, Math.floor(workingMax/3)); break;
+        default:         genBase = workingMax;
+      }
+      setsArr = pat.build(genBase, actualSets);
+      patLabel = pat.label;
+    }
+    unit = "reps";
+  }
+
+  entry.workout.exercises[exIdx] = { ex: replacement, setsArr, unit, patLabel, rest: replacement.rest };
+  saveCurrentProfile();
+  renderDayView();
+  showToast(`Swapped in ${replacement.name}`);
 }
 
 function toggleComplete(idx) {
@@ -1669,6 +1761,9 @@ if (plan && plan.length > 0) {
   showScreen("plan");
   setView(currentView);
   if (currentView === "day") renderDayView();
+} else {
+  const btn = document.getElementById("resume-plan-btn");
+  if (btn) btn.style.display = "none";
 }
 </script>
 </body>
